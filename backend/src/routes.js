@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import db from './db.js';
-import { gerarToken } from './auth.js';
+import { gerarToken, exigirLogin } from './auth.js';
 
 const router = Router(); 
 
@@ -17,10 +17,10 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ erro: 'Informe email e senha' });
   }
 
-  const [linhas] = await db.query('SELECT * FROM usuario WHERE email = ?', [email]); //PROCURA O USUÁRIO PELO EMAIL
+  const [linhas] = await db.query('SELECT * FROM usuario WHERE email = ?', [email]); 
   const usuario = linhas[0];
 
-  if (!usuario || !(await bcrypt.compare(senha, usuario.senha))) { 
+  if (!usuario || !(await bcrypt.compare(senha, usuario.senha))) { // mesma mensagem para email e senha errados, para não revelar quais emails existem
     return res.status(401).json({ erro: 'Email ou senha inválidos' });
   }
 
@@ -30,8 +30,8 @@ router.post('/login', async (req, res) => {
   });
 });
 
-async function salvarCliente({ nome, email, celular }) {
-  const [linhas] = await db.query('SELECT id FROM cliente WHERE email = ?', [email]); //PROCURA SE O CLIENTE JÁ EXISTE PELO EMAIL
+async function salvarCliente({ nome, email, celular }) { // reaproveita o cliente pelo email, assim o histórico dele fica num cadastro só
+  const [linhas] = await db.query('SELECT id FROM cliente WHERE email = ?', [email]);
 
   if (linhas.length > 0) {
     const id = linhas[0].id;
@@ -39,7 +39,7 @@ async function salvarCliente({ nome, email, celular }) {
     return id;
   }
 
-  const [resultado] = await db.query( //SE NÃO EXISTIR, INSERE UM NOVO CLIENTE
+  const [resultado] = await db.query(
     'INSERT INTO cliente (nome, email, celular) VALUES (?, ?, ?)',
     [nome, email, celular]
   );
@@ -50,17 +50,53 @@ router.post('/atendimentos', async (req, res) => {
   const { nome, email, celular, assunto } = req.body; 
 
   if (!nome || !email || !celular || !assunto) {
-    return res.status(400).json({ erro: 'Preencha todos os campos' }); //VERIFICA SE TODOS OS CAMPOS FORAM PREENCHIDOS, SE FALTAR ELE RETORNA UM ERRO 400
+    return res.status(400).json({ erro: 'Preencha todos os campos' });
   }
 
   const clienteId = await salvarCliente({ nome, email, celular });
 
   const [resultado] = await db.query(
-    'INSERT INTO atendimento (cliente_id, assunto) VALUES (?, ?)', //INSERE UM NOVO ATENDIMENTO NA TABELA DE ATENDIMENTOS
+    'INSERT INTO atendimento (cliente_id, assunto) VALUES (?, ?)',
     [clienteId, assunto]
   );
 
-  res.status(201).json({ atendimentoId: resultado.insertId }); //RETORNA O ID DO ATENDIMENTO CRIADO
+  res.status(201).json({ atendimentoId: resultado.insertId });
+});
+
+
+router.get('/atendimentos', exigirLogin, async (req, res) => {
+  const [atendimentos] = await db.query(
+    `SELECT a.id, a.assunto, a.status, a.criado_em, c.nome AS cliente
+     FROM atendimento a
+     JOIN cliente c ON c.id = a.cliente_id
+     WHERE a.usuario_id = ?
+     ORDER BY a.id DESC`,
+    [req.usuario.id]
+  );
+
+  res.json(atendimentos);
+});
+
+router.get('/atendimentos/:id', async (req, res) => {
+  const [linhas] = await db.query(
+    `SELECT a.id, a.assunto, a.status, c.nome AS cliente, u.nome AS atendente
+     FROM atendimento a
+     JOIN cliente c ON c.id = a.cliente_id
+     LEFT JOIN usuario u ON u.id = a.usuario_id
+     WHERE a.id = ?`,
+    [req.params.id]
+  );
+
+  if (linhas.length === 0) {
+    return res.status(404).json({ erro: 'Atendimento não encontrado' });
+  }
+
+  const [mensagens] = await db.query(
+    'SELECT * FROM mensagem WHERE atendimento_id = ? ORDER BY id',
+    [req.params.id]
+  );
+
+  res.json({ ...linhas[0], mensagens });
 });
 
 
