@@ -46,6 +46,7 @@ export default function TelaCliente() {
       <input name="assunto" placeholder="Assunto" value={form.assunto} onChange={alterarCampo} required />
       {erro && <p className="erro">{erro}</p>}
       <button type="submit">Iniciar atendimento</button>
+            <a href="/atendente">Sou atendente</a>
     </form>
   );
 }
