@@ -17,7 +17,7 @@ export default function Chat({ socket, atendimentoId, souAtendente }) {
       });
   }, [atendimentoId]);
 
-  // as mensagens novas chegam pelo socket
+  // as mensagens novas e o aviso do atendente chegam pelo socket
   useEffect(() => {
     function receberMensagem(mensagem) {
       if (mensagem.atendimento_id === atendimentoId) {
@@ -25,8 +25,17 @@ export default function Chat({ socket, atendimentoId, souAtendente }) {
       }
     }
 
+    function atendenteEntrou(nome) {
+      setAtendimento((anterior) => ({ ...anterior, atendente: nome }));
+    }
+
     socket.on('nova-mensagem', receberMensagem);
-    return () => socket.off('nova-mensagem', receberMensagem);
+    socket.on('atendente-entrou', atendenteEntrou);
+
+    return () => {
+      socket.off('nova-mensagem', receberMensagem);
+      socket.off('atendente-entrou', atendenteEntrou);
+    };
   }, [socket, atendimentoId]);
 
   // rola até a última mensagem

@@ -17,6 +17,8 @@ export function iniciarChat(io) {
     socket.on('entrar-atendimento', (id) => {
       if (socket.data.usuario) {
         socket.join(`atendimento:${id}`);
+        // avisa o cliente que o atendente abriu a conversa
+        socket.to(`atendimento:${id}`).emit('atendente-entrou', socket.data.usuario.nome);
       }
     });
 
