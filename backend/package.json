@@ -5,9 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-  "dev": "node --env-file=.env --watch src/servidor.js",
-  "seed": "node --env-file=.env src/criarAtendentes.js"
-},
+    "dev": "node --env-file=.env --watch src/servidor.js",
+    "seed": "node --env-file=.env src/criarAtendentes.js"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

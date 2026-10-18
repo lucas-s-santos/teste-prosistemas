@@ -31,6 +31,7 @@ router.post('/login', async (req, res) => {
     usuario: { id: usuario.id, nome: usuario.nome },
   });
 });
+
 //reaproveita o cliente pelo email, assim o histórico dele fica num cadastro só
 async function salvarCliente({ nome, email, celular }) {
   const [linhas] = await db.query('SELECT id FROM cliente WHERE email = ?', [email]);
