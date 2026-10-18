@@ -23,6 +23,7 @@ export function iniciarChat(io) {
     });
 
     socket.on('enviar-mensagem', (dados) => enviarMensagem(io, socket, dados));
+    socket.on('finalizar-atendimento', (id) => finalizarAtendimento(io, socket, id));
   });
 }
 
@@ -75,7 +76,27 @@ async function enviarMensagem(io, socket, { atendimentoId, conteudo }) {
       conteudo: texto,
       criado_em: new Date(),
     });
-  } catch (erro) {
+    } catch (erro) {
     console.error('Erro ao salvar mensagem:', erro);
+  }
+}
+
+async function finalizarAtendimento(io, socket, atendimentoId) {
+  if (!socket.data.usuario) {
+    return;
+  }
+
+  try {
+    // o "usuario_id = ?" garante que só o atendente responsável consegue finalizar
+    const [resultado] = await db.query(
+      "UPDATE atendimento SET status = 'finalizado' WHERE id = ? AND usuario_id = ?",
+      [atendimentoId, socket.data.usuario.id]
+    );
+
+    if (resultado.affectedRows > 0) {
+      io.to(`atendimento:${atendimentoId}`).emit('atendimento-finalizado', atendimentoId);
+    }
+  } catch (erro) {
+    console.error('Erro ao finalizar atendimento:', erro);
   }
 }

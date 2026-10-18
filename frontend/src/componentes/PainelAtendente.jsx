@@ -4,59 +4,65 @@ import { API } from '../api';
 import Chat from './Chat';
 
 export default function PainelAtendente({ token, usuario }) {
-  const [socket, setSocket] = useState(null);
-  const [atendimentos, setAtendimentos] = useState([]);
-  const [selecionado, setSelecionado] = useState(null);
+    const [socket, setSocket] = useState(null);
+    const [atendimentos, setAtendimentos] = useState([]);
+    const [selecionado, setSelecionado] = useState(null);
 
-  // conecta no chat com o token, e assim o atendente fica online
-  useEffect(() => {
-    const novoSocket = io(API, { auth: { token } });
-    setSocket(novoSocket);
-    return () => novoSocket.disconnect();
-  }, [token]);
+    // conecta no chat com o token, e assim o atendente fica online
+    useEffect(() => {
+        const novoSocket = io(API, { auth: { token } });
+        setSocket(novoSocket);
+        return () => novoSocket.disconnect();
+    }, [token]);
 
-  // carrega a lista agora e de novo sempre que chegar um atendimento
-  useEffect(() => {
-    if (!socket) return;
+    // carrega a lista agora e de novo sempre que chegar um atendimento
+    useEffect(() => {
+        if (!socket) return;
 
-    function carregarAtendimentos() {
-      fetch(`${API}/atendimentos`, { headers: { Authorization: `Bearer ${token}` } })
-        .then((resposta) => resposta.json())
-        .then(setAtendimentos);
+        function carregarAtendimentos() {
+            fetch(`${API}/atendimentos`, { headers: { Authorization: `Bearer ${token}` } })
+                .then((resposta) => resposta.json())
+                .then(setAtendimentos);
+        }
+
+        carregarAtendimentos();
+        socket.on('novo-atendimento', carregarAtendimentos);
+        socket.on('atendimento-finalizado', carregarAtendimentos);
+
+        return () => {
+            socket.off('novo-atendimento', carregarAtendimentos);
+            socket.off('atendimento-finalizado', carregarAtendimentos);
+        };
+    }, [socket, token]);
+
+    function abrirAtendimento(id) {
+        socket.emit('entrar-atendimento', id);
+        setSelecionado(id);
     }
 
-    carregarAtendimentos();
-    socket.on('novo-atendimento', carregarAtendimentos);
-    return () => socket.off('novo-atendimento', carregarAtendimentos);
-  }, [socket, token]);
+    return (
+        <div className="painel">
+            <aside className="lista">
+                <h2>Olá, {usuario.nome}</h2>
+                {atendimentos.length === 0 && <p>Nenhum atendimento ainda.</p>}
+                {atendimentos.map((atendimento) => (
+                    <button
+                        key={atendimento.id}
+                        className={atendimento.id === selecionado ? 'item ativo' : 'item'}
+                        onClick={() => abrirAtendimento(atendimento.id)}
+                    >
+                        <strong>{atendimento.cliente}</strong>
+                        <span>{atendimento.assunto}</span>
+                        {atendimento.status === 'finalizado' && <small>Finalizado</small>}
+                    </button>
+                ))}
+            </aside>
 
-  function abrirAtendimento(id) {
-    socket.emit('entrar-atendimento', id);
-    setSelecionado(id);
-  }
-
-  return (
-    <div className="painel">
-      <aside className="lista">
-        <h2>Olá, {usuario.nome}</h2>
-        {atendimentos.length === 0 && <p>Nenhum atendimento ainda.</p>}
-        {atendimentos.map((atendimento) => (
-          <button
-            key={atendimento.id}
-            className={atendimento.id === selecionado ? 'item ativo' : 'item'}
-            onClick={() => abrirAtendimento(atendimento.id)}
-          >
-            <strong>{atendimento.cliente}</strong>
-            <span>{atendimento.assunto}</span>
-          </button>
-        ))}
-      </aside>
-
-      {selecionado ? (
-        <Chat key={selecionado} socket={socket} atendimentoId={selecionado} souAtendente />
-      ) : (
-        <p className="vazio">Selecione um atendimento</p>
-      )}
-    </div>
-  );
+            {selecionado ? (
+                <Chat key={selecionado} socket={socket} atendimentoId={selecionado} souAtendente />
+            ) : (
+                <p className="vazio">Selecione um atendimento</p>
+            )}
+        </div>
+    );
 }

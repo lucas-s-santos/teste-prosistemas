@@ -56,7 +56,12 @@ button {
 .chat-topo {
   padding: 16px;
   border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
 }
+
 
 .chat-topo h2 {
   margin: 0 0 4px;
@@ -153,4 +158,20 @@ button {
   align-self: center;
   text-align: center;
   color: #666;
+}
+
+
+.botao-finalizar {
+  background: #dc2626;
+}
+
+.chat-finalizado {
+  padding: 16px;
+  border-top: 1px solid #eee;
+  text-align: center;
+  color: #666;
+}
+
+.chat-finalizado p {
+  margin: 0 0 8px;
 }

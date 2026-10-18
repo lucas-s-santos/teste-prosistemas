@@ -17,7 +17,7 @@ export default function Chat({ socket, atendimentoId, souAtendente }) {
       });
   }, [atendimentoId]);
 
-  // as mensagens novas e o aviso do atendente chegam pelo socket
+  // as mensagens novas e os avisos do atendimento chegam pelo socket
   useEffect(() => {
     function receberMensagem(mensagem) {
       if (mensagem.atendimento_id === atendimentoId) {
@@ -29,12 +29,20 @@ export default function Chat({ socket, atendimentoId, souAtendente }) {
       setAtendimento((anterior) => ({ ...anterior, atendente: nome }));
     }
 
+    function atendimentoFinalizado(id) {
+      if (id === atendimentoId) {
+        setAtendimento((anterior) => ({ ...anterior, status: 'finalizado' }));
+      }
+    }
+
     socket.on('nova-mensagem', receberMensagem);
     socket.on('atendente-entrou', atendenteEntrou);
+    socket.on('atendimento-finalizado', atendimentoFinalizado);
 
     return () => {
       socket.off('nova-mensagem', receberMensagem);
       socket.off('atendente-entrou', atendenteEntrou);
+      socket.off('atendimento-finalizado', atendimentoFinalizado);
     };
   }, [socket, atendimentoId]);
 
@@ -49,6 +57,12 @@ export default function Chat({ socket, atendimentoId, souAtendente }) {
     setTexto('');
   }
 
+  function finalizarAtendimento() {
+    if (window.confirm('Deseja finalizar este atendimento?')) {
+      socket.emit('finalizar-atendimento', atendimentoId);
+    }
+  }
+
   function subtitulo() {
     if (!atendimento) return '';
     if (souAtendente) return `Cliente: ${atendimento.cliente}`;
@@ -57,12 +71,20 @@ export default function Chat({ socket, atendimentoId, souAtendente }) {
   }
 
   const meuRemetente = souAtendente ? 'usuario' : 'cliente';
+  const finalizado = atendimento?.status === 'finalizado';
 
   return (
     <div className="chat">
       <div className="chat-topo">
-        <h2>{atendimento?.assunto}</h2>
-        <p>{subtitulo()}</p>
+        <div>
+          <h2>{atendimento?.assunto}</h2>
+          <p>{subtitulo()}</p>
+        </div>
+        {souAtendente && !finalizado && (
+          <button className="botao-finalizar" onClick={finalizarAtendimento}>
+            Finalizar
+          </button>
+        )}
       </div>
 
       <div className="mensagens">
@@ -77,14 +99,23 @@ export default function Chat({ socket, atendimentoId, souAtendente }) {
         <div ref={fimDaLista} />
       </div>
 
-      <form className="chat-envio" onSubmit={enviarMensagem}>
-        <input
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          placeholder="Digite sua mensagem"
-        />
-        <button type="submit">Enviar</button>
-      </form>
+      {finalizado ? (
+        <div className="chat-finalizado">
+          <p>Atendimento finalizado.</p>
+          {!souAtendente && (
+            <button onClick={() => window.location.reload()}>Abrir novo atendimento</button>
+          )}
+        </div>
+      ) : (
+        <form className="chat-envio" onSubmit={enviarMensagem}>
+          <input
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder="Digite sua mensagem"
+          />
+          <button type="submit">Enviar</button>
+        </form>
+      )}
     </div>
   );
 }

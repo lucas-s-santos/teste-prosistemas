@@ -81,7 +81,7 @@ router.get('/atendimentos', exigirLogin, async (req, res) => {
      FROM atendimento a
      JOIN cliente c ON c.id = a.cliente_id
      WHERE a.usuario_id = ?
-     ORDER BY a.id DESC`,
+     ORDER BY a.status = 'finalizado', a.id DESC`,
     [req.usuario.id]
   );
 
