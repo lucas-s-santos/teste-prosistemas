@@ -1,26 +1,28 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import db from './db.js';
-import { gerarToken, exigirLogin } from './auth.js';
+import db from './conexaoBanco.js';
+import { gerarToken, exigirLogin } from './autenticacao.js';
+import { escolherAtendente } from './atendentesOnline.js';
 
-const router = Router(); 
+const router = Router();
 
 router.get('/health', async (req, res) => {
   await db.query('SELECT 1');
   res.json({ ok: true });
 });
 
-router.post('/login', async (req, res) => { 
+router.post('/login', async (req, res) => {
   const { email, senha } = req.body;
 
   if (!email || !senha) {
     return res.status(400).json({ erro: 'Informe email e senha' });
   }
 
-  const [linhas] = await db.query('SELECT * FROM usuario WHERE email = ?', [email]); 
+  const [linhas] = await db.query('SELECT * FROM usuario WHERE email = ?', [email]);
   const usuario = linhas[0];
 
-  if (!usuario || !(await bcrypt.compare(senha, usuario.senha))) { // mesma mensagem para email e senha errados, para não revelar quais emails existem
+  //mesma mensagem para email e senha errados, para não revelar quais emails existem
+  if (!usuario || !(await bcrypt.compare(senha, usuario.senha))) {
     return res.status(401).json({ erro: 'Email ou senha inválidos' });
   }
 
@@ -29,8 +31,8 @@ router.post('/login', async (req, res) => {
     usuario: { id: usuario.id, nome: usuario.nome },
   });
 });
-
-async function salvarCliente({ nome, email, celular }) { // reaproveita o cliente pelo email, assim o histórico dele fica num cadastro só
+//reaproveita o cliente pelo email, assim o histórico dele fica num cadastro só
+async function salvarCliente({ nome, email, celular }) {
   const [linhas] = await db.query('SELECT id FROM cliente WHERE email = ?', [email]);
 
   if (linhas.length > 0) {
@@ -47,22 +49,30 @@ async function salvarCliente({ nome, email, celular }) { // reaproveita o client
 }
 
 router.post('/atendimentos', async (req, res) => {
-  const { nome, email, celular, assunto } = req.body; 
+  const { nome, email, celular, assunto } = req.body;
 
   if (!nome || !email || !celular || !assunto) {
     return res.status(400).json({ erro: 'Preencha todos os campos' });
   }
 
   const clienteId = await salvarCliente({ nome, email, celular });
+  const atendenteId = await escolherAtendente();
+
+  //sem ninguém online, o atendimento fica aguardando até um atendente entrar
+  const status = atendenteId ? 'em_andamento' : 'aguardando';
 
   const [resultado] = await db.query(
-    'INSERT INTO atendimento (cliente_id, assunto) VALUES (?, ?)',
-    [clienteId, assunto]
+    'INSERT INTO atendimento (cliente_id, usuario_id, assunto, status) VALUES (?, ?, ?, ?)',
+    [clienteId, atendenteId, assunto, status]
   );
+
+  if (atendenteId) {
+    // avisa o atendente em tempo real que chegou um atendimento para ele
+    req.app.get('io').to(`usuario:${atendenteId}`).emit('novo-atendimento');
+  }
 
   res.status(201).json({ atendimentoId: resultado.insertId });
 });
-
 
 router.get('/atendimentos', exigirLogin, async (req, res) => {
   const [atendimentos] = await db.query(
@@ -98,6 +108,5 @@ router.get('/atendimentos/:id', async (req, res) => {
 
   res.json({ ...linhas[0], mensagens });
 });
-
 
 export default router;

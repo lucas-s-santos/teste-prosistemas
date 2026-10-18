@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import db from './db.js';
+import db from './conexaoBanco.js';
 
 const usuarios = [
   { nome: 'Ana Souza', email: 'ana@teste.com' },
