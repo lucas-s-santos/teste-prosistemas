@@ -4,16 +4,14 @@ import { API } from '../api';
 import Chat from './Chat';
 
 export default function PainelAtendente({ token, usuario }) {
-    const [socket, setSocket] = useState(null);
+    const [socket] = useState(() => io(API, { auth: { token }, autoConnect: false }));
     const [atendimentos, setAtendimentos] = useState([]);
     const [selecionado, setSelecionado] = useState(null);
 
-    // conecta no chat com o token, e assim o atendente fica online
     useEffect(() => {
-        const novoSocket = io(API, { auth: { token } });
-        setSocket(novoSocket);
-        return () => novoSocket.disconnect();
-    }, [token]);
+        socket.connect();
+        return () => socket.disconnect();
+    }, [socket]);
 
     // carrega a lista agora e de novo sempre que chegar um atendimento
     useEffect(() => {
