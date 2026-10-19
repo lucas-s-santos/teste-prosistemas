@@ -7,7 +7,6 @@ export default function Chat({ socket, atendimentoId, souAtendente }) {
   const [texto, setTexto] = useState('');
   const fimDaLista = useRef(null);
 
-  // o histórico vem pela API quando o chat abre
   useEffect(() => {
     fetch(`${API}/atendimentos/${atendimentoId}`)
       .then((resposta) => resposta.json())
@@ -63,6 +62,11 @@ export default function Chat({ socket, atendimentoId, souAtendente }) {
     }
   }
 
+  function abrirNovoAtendimento() {
+    sessionStorage.removeItem('atendimentoId');
+    window.location.reload();
+  }
+
   function subtitulo() {
     if (!atendimento) return '';
     if (souAtendente) return `Cliente: ${atendimento.cliente}`;
@@ -103,7 +107,7 @@ export default function Chat({ socket, atendimentoId, souAtendente }) {
         <div className="chat-finalizado">
           <p>Atendimento finalizado.</p>
           {!souAtendente && (
-            <button onClick={() => window.location.reload()}>Abrir novo atendimento</button>
+            <button onClick={abrirNovoAtendimento}>Abrir novo atendimento</button>
           )}
         </div>
       ) : (

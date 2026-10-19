@@ -3,10 +3,17 @@ import { io } from 'socket.io-client';
 import { API } from '../api';
 import Chat from '../componentes/Chat';
 
+function atendimentoSalvo() {
+  return Number(sessionStorage.getItem('atendimentoId')) || null;
+}
+
 export default function TelaCliente() {
   const [form, setForm] = useState({ nome: '', email: '', celular: '', assunto: '' });
-  const [atendimentoId, setAtendimentoId] = useState(null);
-  const [socket, setSocket] = useState(null);
+  // se a página for recarregada, volta para o mesmo atendimento
+  const [atendimentoId, setAtendimentoId] = useState(atendimentoSalvo);
+  const [socket, setSocket] = useState(() =>
+    atendimentoId ? io(API, { auth: { atendimentoId } }) : null
+  );
   const [erro, setErro] = useState('');
 
   function alterarCampo(e) {
@@ -29,6 +36,7 @@ export default function TelaCliente() {
       return;
     }
 
+    sessionStorage.setItem('atendimentoId', dados.atendimentoId);
     setSocket(io(API, { auth: { atendimentoId: dados.atendimentoId } }));
     setAtendimentoId(dados.atendimentoId);
   }
@@ -46,7 +54,7 @@ export default function TelaCliente() {
       <input name="assunto" placeholder="Assunto" value={form.assunto} onChange={alterarCampo} required />
       {erro && <p className="erro">{erro}</p>}
       <button type="submit">Iniciar atendimento</button>
-            <a href="/atendente">Sou atendente</a>
+      <a href="/atendente">Sou atendente</a>
     </form>
   );
 }

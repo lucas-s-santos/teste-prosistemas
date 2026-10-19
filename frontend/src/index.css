@@ -175,3 +175,8 @@ button {
 .chat-finalizado p {
   margin: 0 0 8px;
 }
+
+.mensagem-nova {
+  color: #dc2626;
+  font-weight: bold;
+}

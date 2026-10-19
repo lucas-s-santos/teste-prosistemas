@@ -51,7 +51,8 @@ O jeito mais fácil de testar é deixar uma janela do atendente e uma do cliente
 
 Quando o atendente faz login e entra no painel, ele conecta no Socket.IO e passa a contar como online. Quando o cliente envia o formulário, o backend procura o cliente pelo e-mail (se já existir, reaproveita o cadastro), cria o atendimento e escolhe, entre os atendentes online, o que tem menos atendimentos em andamento. Se ninguém estiver online, o atendimento fica aguardando e vai para o primeiro atendente que entrar.
 
-Cada atendimento é uma sala no Socket.IO. O cliente e o atendente entram na mesma sala, e toda mensagem é salva no banco e depois enviada para a sala. O histórico vem pela API quando a conversa é aberta.
+Cada atendimento é uma sala no Socket.IO. O cliente entra na sala do atendimento dele, e o atendente entra nas salas de todos os atendimentos que são dele. Assim ele recebe as mensagens de todas as conversas, e a lista mostra quando chega mensagem nova numa conversa que não está aberta. Toda mensagem é salva no banco e depois enviada para a sala. O histórico vem pela API quando a conversa é aberta.
+
 
 O atendente também pode finalizar o atendimento, e o cliente é avisado na hora.
 
@@ -80,10 +81,11 @@ Quem decide se a mensagem é do cliente ou do atendente é o servidor, pela cone
 
 As senhas são salvas com bcrypt e o login usa JWT.
 
+O id do atendimento do cliente fica no `sessionStorage`. Se ele recarregar a página, a conversa continua. Usei o `sessionStorage` em vez do `localStorage` porque ele é separado por aba, então dá para testar dois clientes no mesmo navegador.
+
 ## O que eu melhoraria
 
 - O cliente não tem login, então quem souber o número de um atendimento consegue abrir a conversa. Daria para gerar um código aleatório para cada atendimento.
-- Se o cliente recarregar a página, a conversa some da tela dele. Ela continua salva no banco.
 - Se o atendente abrir duas abas e fechar uma, ele sai da lista de online.
 - Os atendimentos de um atendente que saiu não são redistribuídos.
 - Não tem testes automatizados.
