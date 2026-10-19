@@ -76,7 +76,7 @@ async function enviarMensagem(io, socket, { atendimentoId, conteudo }) {
       conteudo: texto,
       criado_em: new Date(),
     });
-    } catch (erro) {
+  } catch (erro) {
     console.error('Erro ao salvar mensagem:', erro);
   }
 }
